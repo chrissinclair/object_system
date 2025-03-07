@@ -31,6 +31,8 @@ struct TestObject : Object {
     bool DestroyFinished = false;
 };
 
+DECLARE_OBJECT(TestObject);
+
 struct TestReferencingObject : Object {
     virtual u32 TypeId() const override { return 'REFR'; }
     virtual String TypeName() const override { return "TestReferencingObject"; }
@@ -41,6 +43,8 @@ struct TestReferencingObject : Object {
 
     Object* Next;
 };
+
+DECLARE_OBJECT(TestReferencingObject);
 
 struct TestReferencingArrayObject : Object {
     virtual u32 TypeId() const override { return 'REFA'; }
@@ -53,6 +57,8 @@ struct TestReferencingArrayObject : Object {
     Array<Object*> Others;
 };
 
+DECLARE_OBJECT(TestReferencingArrayObject);
+
 struct TestDelayedDestroyObject : Object {
     virtual u32 TypeId() const override { return 'DSRY'; }
     virtual String TypeName() const override { return "TestDelayedDestroyObject"; }
@@ -60,3 +66,18 @@ struct TestDelayedDestroyObject : Object {
 
     bool FinishedDestruction = false;
 };
+
+DECLARE_OBJECT(TestDelayedDestroyObject);
+
+struct TestDerivedObject : TestReferencingObject {
+    virtual u32 TypeId() const override { return 'DERV'; }
+    virtual String TypeName() const override { return "TestDerivedObject"; }
+    virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const override {
+        TestReferencingObject::GetObjectFields(fields);
+        EXPOSE_FIELD(Other);
+    }
+
+    Object* Other;
+};
+
+DECLARE_OBJECT(TestDerivedObject);

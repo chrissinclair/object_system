@@ -63,3 +63,18 @@ TEST_CASE("Object fields should be correct", "[object]") {
     REQUIRE(otherObjects == &object->SomeOtherObjects);
 }
 
+TEST_CASE("Object class info should be correct", "[object]") {
+    REQUIRE(StaticClass<TestObject>()->Parent() == StaticClass<Object>());
+    REQUIRE(StaticClass<TestObject>()->IsDerivedFrom<Object>());
+    REQUIRE(StaticClass<TestObject>()->Name() == "TestObject");
+    REQUIRE(StaticClass<TestObject>()->Parent()->Name() == "Object");
+    REQUIRE_FALSE(IsValid(StaticClass<Object>()->Parent()));
+}
+
+TEST_CASE("Object class info for derived classes should be correct", "[object]") {
+    REQUIRE(StaticClass<TestDerivedObject>()->Name() == "TestDerivedObject");
+    REQUIRE(StaticClass<TestDerivedObject>()->Parent() == StaticClass<TestReferencingObject>());
+    REQUIRE(StaticClass<TestDerivedObject>()->IsDerivedFrom<TestReferencingObject>());
+    REQUIRE(StaticClass<TestDerivedObject>()->IsDerivedFrom<Object>());
+    REQUIRE_FALSE(StaticClass<TestDerivedObject>()->IsDerivedFrom<TestReferencingArrayObject>());
+}

@@ -14,6 +14,14 @@ enum class ObjectFlags : u8 {
 };
 DEFINE_ENUM_CLASS_FLAGS(ObjectFlags)
 
+struct Class;
+namespace Detail {
+template<typename T>
+void ConfigureClass(Class*);
+}
+template<typename T>
+Class* StaticClass();
+
 struct Object {
     virtual ~Object();
 
@@ -21,7 +29,7 @@ struct Object {
 
     virtual u32 TypeId() const;
     virtual String TypeName() const;
-    virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const;
+    const Array<UniquePtr<ObjectField>>& GetObjectFields() const;
 
     void AddToRootSet();
     void RemoveFromRootSet();
@@ -36,6 +44,19 @@ struct Object {
     u32 GetGeneration() const;
 
     static void CollectGarbage();
+
+    Class* GetClass() const { return classInstance; }
+
+protected:
+    virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const;
+
+private:
+    template<typename T>
+    friend void Detail::ConfigureClass(Class*);
+    template<typename T>
+    friend T* NewObject();
+
+    Class* classInstance = nullptr;
 };
 
 template<typename T>
@@ -47,17 +68,13 @@ T* StaticInstance() {
 
 template<typename T>
 const String& StaticTypeName() {
-    static const String typeName = []{
-        return StaticInstance<T>()->TypeName();
-    }();
+    static const String typeName = StaticInstance<T>()->TypeName();
     return typeName;
 }
 
 template<typename T>
 u32 StaticTypeId() {
-    static const u32 typeId = []{
-        return StaticInstance<T>()->TypeId();
-    }();
+    static const u32 typeId = StaticInstance<T>()->TypeId();
     return typeId;
 }
 
@@ -68,15 +85,97 @@ namespace Detail {
 template<typename T>
 T* NewObject() {
     static_assert(IsDerivedFrom<T, Object>, "T must be an object to be created through NewObject");
-    void* object = Detail::AllocObject(sizeof(T));
+    Object* object = (Object*) Detail::AllocObject(sizeof(T));
     if (!object) {
         return nullptr;
     }
     new (object) T{};
+    object->classInstance = StaticClass<T>();
     return (T*) object;
 }
 
+template<>
+Class* NewObject<Class>();
+
 bool IsValid(Object* object);
+
+template<typename T>
+struct Class* StaticClass();
+
+struct Class : Object {
+    virtual u32 TypeId() const override { return 'CLAS'; }
+    virtual String TypeName() const override { return "Class"; }
+
+    u32 ClassTypeId() const { return typeId; }
+    const String& Name() const { return name; }
+    Class* Parent() const { return parent; }
+    const Array<UniquePtr<ObjectField>>& Fields() const { return fields; }
+
+    template<typename T>
+    bool IsDerivedFrom() {
+        return IsDerivedFrom(StaticClass<T>());
+    }
+
+    bool IsDerivedFrom(Class* parentClass);
+
+private:
+    Class* parent = nullptr;
+    String name;
+    u32 typeId;
+    Array<UniquePtr<ObjectField>> fields;
+
+    template<typename T>
+    friend void Detail::ConfigureClass(Class*);
+};
+
+namespace Detail {
+    template<typename T>
+    void ConfigureClass(Class* classInstance) {
+        static_assert(false, "Attempting to register a class that's not been exposed properly. Ensure you have written DECLARE_OBJECT(type) in your header file, and IMPL_OBJECT(type, parentType) in your cpp file");
+    }
+
+    template<>
+    void ConfigureClass<Object>(Class* classInstance);
+    template<>
+    void ConfigureClass<Class>(Class* classInstance);
+}
+
+#define DECLARE_OBJECT(type) \
+    namespace Detail { \
+        template<> \
+        void ConfigureClass<type>(Class* classInstance); \
+    }
+
+DECLARE_OBJECT(Class)
+
+#define IMPL_OBJECT(type, parentType) \
+    namespace Detail { \
+        template<> \
+        void ConfigureClass<type>(Class* classInstance) { \
+            classInstance->name = #type; \
+            classInstance->parent = StaticClass<parentType>(); \
+            classInstance->typeId = StaticTypeId<type>(); \
+            StaticInstance<type>()->GetObjectFields(classInstance->fields); \
+            StaticInstance<type>()->classInstance = classInstance; \
+        } \
+    } \
+    static bool configuredObjectClassInstance_##type = []{ \
+        StaticClass<type>(); \
+        return true; \
+    }();
+
+
+template<typename T>
+Class* StaticClass() {
+    static Class* instance = []{
+        Class* i = NewObject<Class>();
+        Detail::ConfigureClass<T>(i);
+        i->AddToRootSet();
+        return i;
+    }();
+    return instance;
+};
+
 
 // Weak object pointers can point to objects but will not prevent them being garbage
 // collected. Will become invalid if the object is destroyed or garbage collected

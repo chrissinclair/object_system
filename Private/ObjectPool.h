@@ -28,14 +28,13 @@ struct ObjectPool {
     static void* AllocateObject(u32 objectSize);
     void DestroyObject(Object* object);
 
-    static Array<ObjectPool>& GetPools() { return ObjectPools; }
+    static Array<ObjectPool>& GetPools();
 
 private:
     Array<Array<u8>> Blocks;
     ObjectHeader* FreeListHeader = nullptr;
 
     void AllocateBlock();
-    static Array<ObjectPool> ObjectPools;
 };
 
 ObjectHeader* GetHeaderForObject(const Object* object);

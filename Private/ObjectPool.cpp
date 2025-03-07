@@ -1,6 +1,9 @@
 #include "ObjectPool.h"
 
-Array<ObjectPool> ObjectPool::ObjectPools;
+Array<ObjectPool>& ObjectPool::GetPools() {
+    static Array<ObjectPool> pools;
+    return pools;
+}
 
 ObjectHeader* GetHeaderForObject(const Object* object) {
     ObjectHeader* header = (ObjectHeader*)((u8*) object - sizeof(ObjectHeader));
@@ -60,11 +63,12 @@ u32 ObjectPool::GetPoolSizeForObjectSize(const u32 objectSize) {
 }
 
 ObjectPool* ObjectPool::FindObjectPoolContainingObject(Object* object) {
-    auto it = std::find_if(ObjectPools.begin(), ObjectPools.end(), [object](const ObjectPool& pool) {
+    Array<ObjectPool>& pools = GetPools();
+    auto it = std::find_if(pools.begin(), pools.end(), [object](const ObjectPool& pool) {
         return pool.ContainsObject(object);
     });
 
-    if (it == ObjectPools.end()) {
+    if (it == pools.end()) {
         return nullptr;
     }
 
@@ -76,16 +80,17 @@ void* ObjectPool::AllocateObject(u32 objectSize) {
         objectSize = 1;
     }
 
+    Array<ObjectPool>& pools = GetPools();
     const u32 poolSizeForAllocation = GetPoolSizeForObjectSize(objectSize);
-    auto it = std::find_if(ObjectPools.begin(), ObjectPools.end(), [poolSizeForAllocation](const ObjectPool& pool) {
+    auto it = std::find_if(pools.begin(), pools.end(), [poolSizeForAllocation](const ObjectPool& pool) {
         return pool.PoolElementSize == poolSizeForAllocation;
     });
 
-    if (it == ObjectPools.end()) {
-        it = ObjectPools.emplace(ObjectPools.end(), poolSizeForAllocation);
+    if (it == pools.end()) {
+        it = pools.emplace(pools.end(), poolSizeForAllocation);
     }
 
-    if (it == ObjectPools.end()) [[unlikely]] {
+    if (it == pools.end()) [[unlikely]] {
         return nullptr;
     }
 

@@ -11,6 +11,13 @@ ObjectFlags Object::GetFlags() const {
 
 u32 Object::TypeId() const { return 'OBJT'; }
 String Object::TypeName() const { return "Object"; }
+const Array<UniquePtr<ObjectField>>& Object::GetObjectFields() const {
+    if (IsValid(GetClass())) {
+        return GetClass()->Fields();
+    }
+    static Array<UniquePtr<ObjectField>> empty;
+    return empty;
+}
 void Object::GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const {
 }
 
@@ -59,6 +66,16 @@ void Object::CollectGarbage() {
 
 void* Detail::AllocObject(const u32 objectSize) {
     return ObjectPool::AllocateObject(objectSize);
+}
+
+template<>
+Class* NewObject<Class>() {
+    void* object = Detail::AllocObject(sizeof(Class));
+    if (!object) {
+        return nullptr;
+    }
+    new (object) Class();
+    return (Class*) object;
 }
 
 bool IsValid(Object* object) {
@@ -125,6 +142,9 @@ struct StrongObjectPtrManager : Object {
 
     Array<Object*> objects;
 };
+
+DECLARE_OBJECT(StrongObjectPtrManager)
+IMPL_OBJECT(StrongObjectPtrManager, Object)
 
 StrongObjectPtrManager* StaticStrongObjectPtrManager() {
     static StrongObjectPtrManager* instance = NewObject<StrongObjectPtrManager>();

@@ -1,7 +1,10 @@
 #include "Object/Object.h"
 #include "ObjectPool.h"
 
-Array<Object*> RootSet;
+Array<Object*>& GetRootSet() {
+    static Array<Object*> rootSet;
+    return rootSet;
+}
 
 void MarkObjectsInPoolAsUnreachable(ObjectPool& pool) {
     u64 stride = pool.PoolElementSize + sizeof(ObjectHeader);
@@ -24,9 +27,8 @@ void MarkObjectsInPoolAsUnreachable(ObjectPool& pool) {
 }
 
 void MarkObjectsReachableFrom(Object* object) {
-    Array<UniquePtr<ObjectField>> fields;
-    object->GetObjectFields(fields);
-    for (UniquePtr<ObjectField>& field : fields) {
+    const Array<UniquePtr<ObjectField>>& fields = object->GetObjectFields();
+    for (const UniquePtr<ObjectField>& field : fields) {
         if (field->Type == ObjectFieldType::Object) {
             ObjectObjectField& objectField = static_cast<ObjectObjectField&>(*field);
             Object** referencedObject = objectField.GetValuePtr(object);
@@ -118,7 +120,7 @@ void CollectGarbage() {
     }
 
     // Sweep
-    for (Object* object : RootSet) {
+    for (Object* object : GetRootSet()) {
         ObjectHeader* header = GetHeaderForObject(object);
         if (!header || header->Magic != ObjectHeader::RequiredMagic) {
             // TODO: This is bad, we should really warn about it
@@ -140,11 +142,12 @@ void CollectGarbage() {
 }
 
 void AddToRootSet(Object* object) {
-    RootSet.push_back(object);
+    GetRootSet().push_back(object);
     SetFlag(GetHeaderForObject(object)->Flags, ObjectFlags::InRootSet);
 }
 
 void RemoveFromRootSet(Object* object) {
-    RootSet.erase(std::remove(RootSet.begin(), RootSet.end(), object), RootSet.end());
+    Array<Object*>& roots = GetRootSet();
+    roots.erase(std::remove(roots.begin(), roots.end(), object), roots.end());
     UnsetFlag(GetHeaderForObject(object)->Flags, ObjectFlags::InRootSet);
 }
