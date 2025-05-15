@@ -6,26 +6,6 @@ Array<Object*>& GetRootSet() {
     return rootSet;
 }
 
-void MarkObjectsInPoolAsUnreachable(ObjectPool& pool) {
-    u64 stride = pool.PoolElementSize + sizeof(ObjectHeader);
-    for (Array<u8>& block : pool.GetBlocks()) {
-        const u8* end = block.data() + block.size();
-        for (u8* headerAddress = block.data(); headerAddress < end; headerAddress += stride) {
-            ObjectHeader* header = (ObjectHeader*) headerAddress;
-            if (header->Magic != ObjectHeader::RequiredMagic) {
-                // TODO: This is bad, we should really warn about it
-                continue;
-            }
-
-            if (!HasAnyFlags(header->Flags, ObjectFlags::Allocated)) {
-                continue;
-            }
-
-            SetFlag(header->Flags, ObjectFlags::Unreachable);
-        }
-    }
-}
-
 void MarkObjectsReachableFrom(Object* object) {
     const Array<UniquePtr<ObjectField>>& fields = object->GetObjectFields();
     for (const UniquePtr<ObjectField>& field : fields) {
@@ -108,6 +88,9 @@ void FreeUnreachableObjectsInPool(ObjectPool& pool) {
                 if (HasAnyFlags(header->Flags, ObjectFlags::IsDestroyed)) {
                     pool.DestroyObject(object);
                 }
+            } else {
+                // Reset for next GC run
+                SetFlag(header->Flags, ObjectFlags::Unreachable);
             }
         }
     }
@@ -115,11 +98,6 @@ void FreeUnreachableObjectsInPool(ObjectPool& pool) {
 
 void CollectGarbage() {
     // Mark
-    for (ObjectPool& pool : ObjectPool::GetPools()) {
-        MarkObjectsInPoolAsUnreachable(pool);
-    }
-
-    // Sweep
     for (Object* object : GetRootSet()) {
         ObjectHeader* header = GetHeaderForObject(object);
         if (!header || header->Magic != ObjectHeader::RequiredMagic) {

@@ -31,7 +31,7 @@ void* ObjectPool::Allocate() {
     FreeListHeader = FreeListHeader->NextFree;
     header->Generation++;
     SetFlag(header->Flags, ObjectFlags::Allocated);
-    UnsetFlag(header->Flags, ObjectFlags::Unreachable);
+    SetFlag(header->Flags, ObjectFlags::Unreachable);
     header->NextFree = nullptr;
 
     return header + 1;
