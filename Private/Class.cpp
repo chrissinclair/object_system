@@ -42,6 +42,7 @@ void Detail::ConfigureClass<Object>(Class* classInstance) {
     classInstance->typeId = StaticTypeId<Object>();
     StaticInstance<Object>()->GetObjectFields(classInstance->fields);
     StaticInstance<Object>()->classInstance = classInstance;
+    classInstance->staticInstance = StaticInstance<Object>();
     classInstance->Register();
 }
 
@@ -52,6 +53,7 @@ void Detail::ConfigureClass<Class>(Class* classInstance) {
     classInstance->typeId = StaticTypeId<Class>();
     StaticInstance<Class>()->GetObjectFields(classInstance->fields);
     StaticInstance<Class>()->classInstance = classInstance;
+    classInstance->staticInstance = StaticInstance<Class>();
     classInstance->Register();
 }
 

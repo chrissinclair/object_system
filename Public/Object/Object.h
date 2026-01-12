@@ -102,6 +102,10 @@ bool IsValid(const Object* object);
 template<typename T>
 struct Class* StaticClass();
 
+
+template<typename T> T* Cast(Object* object);
+template<typename T> const T* Cast(const Object* object);
+
 struct Class : Object {
     virtual u32 TypeId() const override { return 'CLAS'; }
     virtual String TypeName() const override { return "Class"; }
@@ -120,8 +124,13 @@ struct Class : Object {
 
     bool IsDerivedFrom(const Class* parentClass) const;
 
+    Object* StaticInstance() const { return staticInstance; }
+    template<typename T>
+    T* StaticInstance() const { return Cast<T>(staticInstance); }
+
 private:
     Class* parent = nullptr;
+    Object* staticInstance = nullptr;
     String name;
     u32 typeId;
     Array<UniquePtr<ObjectField>> fields;
@@ -161,6 +170,7 @@ DECLARE_OBJECT(Class)
             classInstance->typeId = StaticTypeId<type>(); \
             StaticInstance<type>()->GetObjectFields(classInstance->fields); \
             StaticInstance<type>()->classInstance = classInstance; \
+            classInstance->staticInstance = StaticInstance<type>(); \
             classInstance->Register(); \
         } \
     } \
@@ -248,3 +258,22 @@ struct StrongObjectPtr : StrongObjectPtrBase {
     const T* operator->() const { return (const T*) StrongObjectPtrBase::operator->(); }
     T* operator->() { return (T*) StrongObjectPtrBase::operator->(); }
 };
+
+template<typename T>
+const T* Cast(const Object* object) {
+    static_assert(IsDerivedFrom<T, Object>, "T must be an object to cast an object to it");
+    if (object && object->GetClass()->IsDerivedFrom<T>()) {
+        return static_cast<T*>(object);
+    }
+    return nullptr;
+}
+
+template<typename T>
+T* Cast(Object* object) {
+    static_assert(IsDerivedFrom<T, Object>, "T must be an object to cast an object to it");
+    if (object && object->GetClass()->IsDerivedFrom<T>()) {
+        return static_cast<T*>(object);
+    }
+    return nullptr;
+}
+
