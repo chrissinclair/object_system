@@ -13,6 +13,7 @@ enum class ObjectFieldType {
     Real64,
     Array,
     Object,
+    String,
 };
 
 struct ObjectField {
@@ -75,6 +76,13 @@ struct ObjectObjectField : ObjectField {
     Object** GetValuePtr(Object* object) { return (Object**) GetUntypedValuePtr(object); }
 };
 
+struct StringObjectField : ObjectField {
+    StringObjectField(u32 offset, const String& name);
+    StringObjectField(u32 offset, String&& name);
+
+    String* GetValuePtr(Object* object) { return (String*) GetUntypedValuePtr(object); }
+};
+
 namespace Detail {
     template<typename T>
     constexpr bool IsObjectType = IsDerivedFrom<T, Object>;
@@ -95,6 +103,7 @@ namespace Detail {
     DECLARE_FIND_FIELD_TYPE(i64, Int64)
     DECLARE_FIND_FIELD_TYPE(r32, Real32)
     DECLARE_FIND_FIELD_TYPE(r64, Real64)
+    DECLARE_FIND_FIELD_TYPE(String, String)
 
 #undef DECLARE_FIND_FIELD_TYPE
 
@@ -136,6 +145,7 @@ namespace Detail {
     DECLARE_CREATE_OBJECT_FIELD(i64)
     DECLARE_CREATE_OBJECT_FIELD(r32)
     DECLARE_CREATE_OBJECT_FIELD(r64)
+    DECLARE_CREATE_OBJECT_FIELD(String)
 
 #undef DECLARE_CREATE_OBJECT_FIELD
 

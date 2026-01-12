@@ -14,6 +14,7 @@ struct TestObject : Object {
         EXPOSE_FIELD(SomeReal64);
         EXPOSE_FIELD(SomeOtherObject);
         EXPOSE_FIELD(SomeOtherObjects);
+        EXPOSE_FIELD(SomeString);
     }
 
     virtual bool IsDestroyFinished() const override {
@@ -27,6 +28,7 @@ struct TestObject : Object {
     r64 SomeReal64;
     Object* SomeOtherObject;
     Array<Object*> SomeOtherObjects;
+    String SomeString;
 
     bool DestroyFinished = false;
 };

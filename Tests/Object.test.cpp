@@ -21,8 +21,9 @@ TEST_CASE("Object fields should be correct", "[object]") {
     object->SomeReal64 = 4.56;
     object->SomeOtherObject = otherObject;
     object->SomeOtherObjects.push_back(otherObject);
+    object->SomeString = "Test string";
 
-    REQUIRE(fields.size() == 7);
+    REQUIRE(fields.size() == 8);
     // Bool field
     REQUIRE(fields[0]->Type == ObjectFieldType::Boolean);
     REQUIRE(fields[0]->Name == "SomeBoolean");
@@ -38,22 +39,22 @@ TEST_CASE("Object fields should be correct", "[object]") {
     REQUIRE(fields[2]->Name == "SomeInt64");
     REQUIRE(*static_cast<I32ObjectField&>(*fields[2]).GetValuePtr(object) == 456);
 
-    // Int32 field
+    // Real32 field
     REQUIRE(fields[3]->Type == ObjectFieldType::Real32);
     REQUIRE(fields[3]->Name == "SomeReal32");
     REQUIRE(*static_cast<R32ObjectField&>(*fields[3]).GetValuePtr(object) == 1.0);
 
-    // Int32 field
+    // Real64 field
     REQUIRE(fields[4]->Type == ObjectFieldType::Real64);
     REQUIRE(fields[4]->Name == "SomeReal64");
     REQUIRE(*static_cast<R64ObjectField&>(*fields[4]).GetValuePtr(object) == 4.56);
 
-    // Int32 field
+    // Object* field
     REQUIRE(fields[5]->Type == ObjectFieldType::Object);
     REQUIRE(fields[5]->Name == "SomeOtherObject");
     REQUIRE(*static_cast<ObjectObjectField&>(*fields[5]).GetValuePtr(object) == otherObject);
 
-    // Int32 field
+    // Array field
     REQUIRE(fields[6]->Type == ObjectFieldType::Array);
     REQUIRE(fields[6]->Name == "SomeOtherObjects");
     REQUIRE(static_cast<ArrayObjectField&>(*fields[6]).ItemType == ObjectFieldType::Object);
@@ -61,6 +62,11 @@ TEST_CASE("Object fields should be correct", "[object]") {
     REQUIRE(otherObjects->size() == 1);
     REQUIRE((*otherObjects)[0] == otherObject);
     REQUIRE(otherObjects == &object->SomeOtherObjects);
+
+    // String field
+    REQUIRE(fields[7]->Type == ObjectFieldType::String);
+    REQUIRE(fields[7]->Name == "SomeString");
+    REQUIRE(*static_cast<StringObjectField&>(*fields[7]).GetValuePtr(object) == "Test string");
 }
 
 TEST_CASE("Object class info should be correct", "[object]") {
