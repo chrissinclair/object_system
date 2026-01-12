@@ -78,7 +78,7 @@ Class* NewObject<Class>() {
     return (Class*) object;
 }
 
-bool IsValid(Object* object) {
+bool IsValid(const Object* object) {
     if (object == nullptr) {
         return false;
     }

@@ -78,3 +78,11 @@ TEST_CASE("Object class info for derived classes should be correct", "[object]")
     REQUIRE(StaticClass<TestDerivedObject>()->IsDerivedFrom<Object>());
     REQUIRE_FALSE(StaticClass<TestDerivedObject>()->IsDerivedFrom<TestReferencingArrayObject>());
 }
+
+TEST_CASE("Object class info should be able to find derived classes", "[object]") {
+    Array<Class*> derivedClasses = StaticClass<TestReferencingObject>()->GetDerivedClasses();
+    REQUIRE(derivedClasses.size() == 1);
+    if (derivedClasses.size() > 0) {
+        REQUIRE(derivedClasses[0] == StaticClass<TestDerivedObject>());
+    }
+}

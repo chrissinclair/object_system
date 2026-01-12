@@ -97,7 +97,7 @@ T* NewObject() {
 template<>
 Class* NewObject<Class>();
 
-bool IsValid(Object* object);
+bool IsValid(const Object* object);
 
 template<typename T>
 struct Class* StaticClass();
@@ -116,7 +116,9 @@ struct Class : Object {
         return IsDerivedFrom(StaticClass<T>());
     }
 
-    bool IsDerivedFrom(Class* parentClass);
+    Array<Class*> GetDerivedClasses() const;
+
+    bool IsDerivedFrom(const Class* parentClass) const;
 
 private:
     Class* parent = nullptr;
@@ -126,6 +128,8 @@ private:
 
     template<typename T>
     friend void Detail::ConfigureClass(Class*);
+
+    void Register();
 };
 
 namespace Detail {
@@ -157,6 +161,7 @@ DECLARE_OBJECT(Class)
             classInstance->typeId = StaticTypeId<type>(); \
             StaticInstance<type>()->GetObjectFields(classInstance->fields); \
             StaticInstance<type>()->classInstance = classInstance; \
+            classInstance->Register(); \
         } \
     } \
     static bool configuredObjectClassInstance_##type = []{ \
