@@ -30,18 +30,27 @@ DEFINE_OBJECT_FIELD_TYPE_CTOR(I32ObjectField, Int32)
 DEFINE_OBJECT_FIELD_TYPE_CTOR(I64ObjectField, Int64)
 DEFINE_OBJECT_FIELD_TYPE_CTOR(R32ObjectField, Real32)
 DEFINE_OBJECT_FIELD_TYPE_CTOR(R64ObjectField, Real64)
-DEFINE_OBJECT_FIELD_TYPE_CTOR(ObjectObjectField, Object)
 DEFINE_OBJECT_FIELD_TYPE_CTOR(StringObjectField, String)
 
 #undef DEFINE_OBJECT_FIELD_TYPE_CTOR
 
-ArrayObjectField::ArrayObjectField(const u32 offset, const String& name, const ObjectFieldType itemType)
-    : ObjectField(ObjectFieldType::Array, offset, name),
-      ItemType(itemType)
+ObjectObjectField::ObjectObjectField(const u32 offset, const String& name, Class* innerType)
+    : ObjectField(ObjectFieldType::Object, offset, name),
+      InnerType(innerType)
 {}
-ArrayObjectField::ArrayObjectField(const u32 offset, String&& name, const ObjectFieldType itemType)
+
+ObjectObjectField::ObjectObjectField(const u32 offset, String&& name, Class* innerType)
+    : ObjectField(ObjectFieldType::Object, offset, Move(name)),
+      InnerType(innerType)
+{}
+
+ArrayObjectField::ArrayObjectField(const u32 offset, const String& name, UniquePtr<ObjectField>&& innerType)
+    : ObjectField(ObjectFieldType::Array, offset, name),
+      InnerType(Move(innerType))
+{}
+ArrayObjectField::ArrayObjectField(const u32 offset, String&& name, UniquePtr<ObjectField>&& innerType)
     : ObjectField(ObjectFieldType::Array, offset, Move(name)),
-      ItemType(itemType)
+      InnerType(Move(innerType))
 {}
 
 #define DEFINE_CREATE_OBJECT_FIELD(type, objectFieldType) \

@@ -12,7 +12,7 @@ TEST_CASE("Object fields should be correct", "[object]") {
     StaticInstance<TestObject>()->GetObjectFields(fields);
 
     TestObject* object = NewObject<TestObject>();
-    TestObject* otherObject = NewObject<TestObject>();
+    TestObject* otherObject = (TestObject*) NewObject(StaticClass<TestObject>());
     REQUIRE(object);
     object->SomeBoolean = true;
     object->SomeInt32 = 123;
@@ -52,12 +52,14 @@ TEST_CASE("Object fields should be correct", "[object]") {
     // Object* field
     REQUIRE(fields[5]->Type == ObjectFieldType::Object);
     REQUIRE(fields[5]->Name == "SomeOtherObject");
+    REQUIRE(static_cast<ObjectObjectField&>(*fields[5]).InnerType == StaticClass<Object>());
     REQUIRE(*static_cast<ObjectObjectField&>(*fields[5]).GetValuePtr(object) == otherObject);
 
     // Array field
     REQUIRE(fields[6]->Type == ObjectFieldType::Array);
     REQUIRE(fields[6]->Name == "SomeOtherObjects");
-    REQUIRE(static_cast<ArrayObjectField&>(*fields[6]).ItemType == ObjectFieldType::Object);
+    REQUIRE(static_cast<ArrayObjectField&>(*fields[6]).InnerType->Type == ObjectFieldType::Object);
+    REQUIRE(static_cast<ObjectObjectField&>(*static_cast<ArrayObjectField&>(*fields[6]).InnerType).InnerType == StaticClass<Object>());
     Array<Object*>* otherObjects = (Array<Object*>*) fields[6]->GetUntypedValuePtr(object);
     REQUIRE(otherObjects->size() == 1);
     REQUIRE((*otherObjects)[0] == otherObject);
@@ -72,6 +74,7 @@ TEST_CASE("Object fields should be correct", "[object]") {
 TEST_CASE("Object class info should be correct", "[object]") {
     REQUIRE(StaticClass<TestObject>()->Parent() == StaticClass<Object>());
     REQUIRE(StaticClass<TestObject>()->IsDerivedFrom<Object>());
+    REQUIRE(StaticClass<TestObject>()->Size() == sizeof(TestObject));
     REQUIRE(StaticClass<TestObject>()->Name() == "TestObject");
     REQUIRE(StaticClass<TestObject>()->Parent()->Name() == "Object");
     REQUIRE(StaticClass<TestObject>()->StaticInstance() == StaticInstance<TestObject>());
@@ -83,6 +86,7 @@ TEST_CASE("Object class info for derived classes should be correct", "[object]")
     REQUIRE(StaticClass<TestDerivedObject>()->Parent() == StaticClass<TestReferencingObject>());
     REQUIRE(StaticClass<TestDerivedObject>()->IsDerivedFrom<TestReferencingObject>());
     REQUIRE(StaticClass<TestDerivedObject>()->IsDerivedFrom<Object>());
+    REQUIRE(StaticClass<TestDerivedObject>()->Size() == sizeof(TestDerivedObject));
     REQUIRE(StaticClass<TestDerivedObject>()->StaticInstance() == StaticInstance<TestDerivedObject>());
     REQUIRE_FALSE(StaticClass<TestDerivedObject>()->IsDerivedFrom<TestReferencingArrayObject>());
 }

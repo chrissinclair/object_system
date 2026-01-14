@@ -55,6 +55,7 @@ private:
     friend void Detail::ConfigureClass(Class*);
     template<typename T>
     friend T* NewObject();
+    friend Object* NewObject(Class*);
 
     Class* classInstance = nullptr;
 };
@@ -82,16 +83,12 @@ namespace Detail {
     void* AllocObject(u32 objectSize);
 }
 
+Object* NewObject(Class* objectClass);
+
 template<typename T>
 T* NewObject() {
     static_assert(IsDerivedFrom<T, Object>, "T must be an object to be created through NewObject");
-    Object* object = (Object*) Detail::AllocObject(sizeof(T));
-    if (!object) {
-        return nullptr;
-    }
-    new (object) T{};
-    object->classInstance = StaticClass<T>();
-    return (T*) object;
+    return (T*) NewObject(StaticClass<T>());
 }
 
 template<>
@@ -111,6 +108,7 @@ struct Class : Object {
     virtual String TypeName() const override { return "Class"; }
 
     u32 ClassTypeId() const { return typeId; }
+    u32 Size() const { return size; }
     const String& Name() const { return name; }
     Class* Parent() const { return parent; }
     const Array<UniquePtr<ObjectField>>& Fields() const { return fields; }
@@ -133,11 +131,15 @@ private:
     Object* staticInstance = nullptr;
     String name;
     u32 typeId;
+    u32 size;
     Array<UniquePtr<ObjectField>> fields;
+    void(*constructor)(Object* object);
 
     template<typename T>
     friend void Detail::ConfigureClass(Class*);
+    friend Object* NewObject(Class*);
 
+    void Construct(Object*);
     void Register();
 };
 
@@ -168,6 +170,8 @@ DECLARE_OBJECT(Class)
             classInstance->name = #type; \
             classInstance->parent = StaticClass<parentType>(); \
             classInstance->typeId = StaticTypeId<type>(); \
+            classInstance->size = sizeof(type); \
+            classInstance->constructor = [](Object* object) { new (object) type{}; }; \
             StaticInstance<type>()->GetObjectFields(classInstance->fields); \
             StaticInstance<type>()->classInstance = classInstance; \
             classInstance->staticInstance = StaticInstance<type>(); \

@@ -3,6 +3,7 @@
 #include "Object/Types.h"
 #include "Object/TypeTraits.h"
 
+struct Class;
 struct Object;
 
 enum class ObjectFieldType {
@@ -63,17 +64,19 @@ struct R64ObjectField : ObjectField {
 };
 
 struct ArrayObjectField : ObjectField {
-    ArrayObjectField(u32 offset, const String& name, ObjectFieldType itemType);
-    ArrayObjectField(u32 offset, String&& name, ObjectFieldType itemType);
+    ArrayObjectField(u32 offset, const String& name, UniquePtr<ObjectField>&& innerType);
+    ArrayObjectField(u32 offset, String&& name, UniquePtr<ObjectField>&& innerType);
 
-    ObjectFieldType ItemType;
+    UniquePtr<ObjectField> InnerType;
 };
 
 struct ObjectObjectField : ObjectField {
-    ObjectObjectField(u32 offset, const String& name);
-    ObjectObjectField(u32 offset, String&& name);
+    ObjectObjectField(u32 offset, const String& name, Class* innerType);
+    ObjectObjectField(u32 offset, String&& name, Class* innerType);
 
     Object** GetValuePtr(Object* object) { return (Object**) GetUntypedValuePtr(object); }
+
+    Class* InnerType;
 };
 
 struct StringObjectField : ObjectField {
@@ -82,6 +85,9 @@ struct StringObjectField : ObjectField {
 
     String* GetValuePtr(Object* object) { return (String*) GetUntypedValuePtr(object); }
 };
+
+template<typename T>
+Class* StaticClass();
 
 namespace Detail {
     template<typename T>
@@ -153,10 +159,10 @@ namespace Detail {
     struct ObjectFieldCreator<T*> {
         static_assert(IsObjectType<T>, "Attempting to expose an unsupported type to the reflection system");
         UniquePtr<ObjectField> operator()(const u32 offset, const String& name) {
-            return MakeUnique<ObjectObjectField>(offset, name);
+            return MakeUnique<ObjectObjectField>(offset, name, StaticClass<T>());
         };
         UniquePtr<ObjectField> operator()(const u32 offset, String&& name) {
-            return MakeUnique<ObjectObjectField>(offset, Move(name));
+            return MakeUnique<ObjectObjectField>(offset, Move(name), StaticClass<T>());
         };
     };
 
@@ -165,10 +171,10 @@ namespace Detail {
         static_assert(FindFieldType<T> != ObjectFieldType::Array, "Arrays of arrays are not supported by the reflection system");
 
         UniquePtr<ObjectField> operator()(const u32 offset, const String& name) {
-            return MakeUnique<ArrayObjectField>(offset, name, FindFieldType<T>);
+            return MakeUnique<ArrayObjectField>(offset, name, ObjectFieldCreator<T>{}(0, "item"));
         }
         UniquePtr<ObjectField> operator()(const u32 offset, String&& name) {
-            return MakeUnique<ArrayObjectField>(offset, Move(name), FindFieldType<T>);
+            return MakeUnique<ArrayObjectField>(offset, Move(name), ObjectFieldCreator<T>{}(0, "item"));
         }
     };
 

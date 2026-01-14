@@ -33,7 +33,7 @@ void MarkObjectsReachableFrom(Object* object) {
             }
         } else if (field->Type == ObjectFieldType::Array) {
             ArrayObjectField& arrayField = static_cast<ArrayObjectField&>(*field);
-            if (arrayField.ItemType != ObjectFieldType::Object) {
+            if (arrayField.InnerType->Type != ObjectFieldType::Object) {
                 continue;
             }
 

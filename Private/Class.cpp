@@ -31,6 +31,10 @@ bool Class::IsDerivedFrom(const Class* parentClass) const {
     return Parent()->IsDerivedFrom(parentClass);
 }
 
+void Class::Construct(Object* object) {
+    constructor(object);
+}
+
 void Class::Register() {
     GetAllClasses().emplace_back(this);
 }
@@ -40,6 +44,10 @@ void Detail::ConfigureClass<Object>(Class* classInstance) {
     classInstance->parent = nullptr;
     classInstance->name = "Object";
     classInstance->typeId = StaticTypeId<Object>();
+    classInstance->size = sizeof(Object);
+    classInstance->constructor = [](Object* object) {
+        new (object) Object{};
+    };
     StaticInstance<Object>()->GetObjectFields(classInstance->fields);
     StaticInstance<Object>()->classInstance = classInstance;
     classInstance->staticInstance = StaticInstance<Object>();
@@ -51,6 +59,10 @@ void Detail::ConfigureClass<Class>(Class* classInstance) {
     classInstance->parent = StaticClass<Object>();
     classInstance->name = "Class";
     classInstance->typeId = StaticTypeId<Class>();
+    classInstance->size = sizeof(Class);
+    classInstance->constructor = [](Object* object) {
+        new (object) Class{};
+    };
     StaticInstance<Class>()->GetObjectFields(classInstance->fields);
     StaticInstance<Class>()->classInstance = classInstance;
     classInstance->staticInstance = StaticInstance<Class>();

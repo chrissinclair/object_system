@@ -68,6 +68,20 @@ void* Detail::AllocObject(const u32 objectSize) {
     return ObjectPool::AllocateObject(objectSize);
 }
 
+Object* NewObject(Class* objectClass) {
+    if (objectClass == StaticClass<Class>()) {
+        return NewObject<Class>();
+    }
+
+    Object* object = (Object*) Detail::AllocObject(objectClass->Size());
+    if (!object) {
+        return nullptr;
+    }
+    objectClass->Construct(object);
+    object->classInstance = objectClass;
+    return object;
+}
+
 template<>
 Class* NewObject<Class>() {
     void* object = Detail::AllocObject(sizeof(Class));
