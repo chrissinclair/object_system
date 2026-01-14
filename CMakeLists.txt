@@ -11,6 +11,8 @@ target_include_directories(Object
     PRIVATE
         Private
 )
+set_property(TARGET Object PROPERTY CXX_STANDARD 23)
+set_property(TARGET Object PROPERTY CXX_STANDARD_REQUIRED ON)
 
 if (${OBJECT_SYSTEM_TESTS})
     add_subdirectory(ThirdParty/catch2)
@@ -22,6 +24,9 @@ if (${OBJECT_SYSTEM_TESTS})
             Object
             Catch2::Catch2WithMain
     )
+
+    set_property(TARGET ObjectTests PROPERTY CXX_STANDARD 23)
+    set_property(TARGET ObjectTests PROPERTY CXX_STANDARD_REQUIRED ON)
 
     list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
     include(CTest)

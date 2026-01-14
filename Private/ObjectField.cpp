@@ -13,6 +13,29 @@ ObjectField::ObjectField(const ObjectFieldType type, const u32 offset, String&& 
       Name(Move(name))
 {}
 
+bool ObjectField::HasTag(const String& tag) const {
+    return tags.find(tag) != tags.end();
+}
+
+const String& ObjectField::GetTag(const String& tag) const {
+    auto it = tags.find(tag);
+    if (it != tags.end()) {
+        return it->second;
+    }
+    static String missingTag{};
+    return missingTag;
+}
+
+ObjectField* ObjectField::WithTag(const String& tag, const String& value) {
+    tags.emplace(tag, value);
+    return this;
+}
+
+ObjectField* ObjectField::WithTag(String&& tag, String&& value) {
+    tags.emplace(Move(tag), Move(value));
+    return this;
+}
+
 void* ObjectField::GetUntypedValuePtr(Object* object) {
     return ((u8*) object) + Offset;
 }

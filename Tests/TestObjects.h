@@ -7,8 +7,11 @@ struct TestObject : Object {
     virtual String TypeName() const override { return "TestObject"; }
     virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const override {
         Object::GetObjectFields(fields);
-        EXPOSE_FIELD(SomeBoolean);
-        EXPOSE_FIELD(SomeInt32);
+        EXPOSE_FIELD(SomeBoolean)
+            ->WithTag("TestTag", "TestTagValue")
+            ->WithTag("OtherTag", "OtherTagValue");
+        EXPOSE_FIELD(SomeInt32)
+            ->WithTag("TestTag", "AnotherTestTagValue");
         EXPOSE_FIELD(SomeInt64);
         EXPOSE_FIELD(SomeReal32);
         EXPOSE_FIELD(SomeReal64);

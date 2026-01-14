@@ -98,3 +98,20 @@ TEST_CASE("Object class info should be able to find derived classes", "[object]"
         REQUIRE(derivedClasses[0] == StaticClass<TestDerivedObject>());
     }
 }
+
+TEST_CASE("Object fields should maintain tags", "[object]") {
+    const Array<UniquePtr<ObjectField>>& fields = StaticClass<TestObject>()->Fields();
+
+    REQUIRE(fields.size() == 8);
+
+    REQUIRE(fields[0]->Name == "SomeBoolean");
+    REQUIRE(fields[0]->HasTag("TestTag"));
+    REQUIRE(fields[0]->GetTag("TestTag") == "TestTagValue");
+    REQUIRE(fields[0]->HasTag("OtherTag"));
+    REQUIRE(fields[0]->GetTag("OtherTag") == "OtherTagValue");
+
+    REQUIRE(fields[1]->Name == "SomeInt32");
+    REQUIRE(fields[1]->HasTag("TestTag"));
+    REQUIRE(fields[1]->GetTag("TestTag") == "AnotherTestTagValue");
+    REQUIRE_FALSE(fields[1]->HasTag("OtherTag"));
+}

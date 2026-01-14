@@ -25,7 +25,15 @@ struct ObjectField {
     ObjectField(ObjectFieldType type, u32 offset, const String& name);
     ObjectField(ObjectFieldType type, u32 offset, String&& name);
 
+    bool HasTag(const String& tag) const;
+    const String& GetTag(const String& tag) const;
+    ObjectField* WithTag(const String& tag, const String& value);
+    ObjectField* WithTag(String&& tag, String&& value);
+
     void* GetUntypedValuePtr(Object* object);
+
+private:
+    Map<String, String> tags;
 };
 
 struct BoolObjectField : ObjectField {
