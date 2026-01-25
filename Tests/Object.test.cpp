@@ -107,6 +107,9 @@ TEST_CASE("Enum info should be correct", "[object]") {
     REQUIRE(StaticEnum<TestEnum>()->Enumerators().size() == 2);
     REQUIRE(StaticEnum<TestEnum>()->Enumerators()[0] == "FirstEnumerator");
     REQUIRE(StaticEnum<TestEnum>()->Enumerators()[1] == "SecondEnumerator");
+
+    REQUIRE(StaticEnum<TestEnum>()->ToString(static_cast<i32>(TestEnum::SecondEnumerator)) == "SecondEnumerator");
+    REQUIRE(StaticEnum<TestEnum>()->FromString("SECONDENUMERATOR") == static_cast<i32>(TestEnum::SecondEnumerator));
 }
 
 TEST_CASE("Object class info should be able to find derived classes", "[object]") {

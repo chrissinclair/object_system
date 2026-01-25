@@ -1,6 +1,36 @@
 #include "Object/Object.h"
 
+#include <algorithm>
+
 IMPL_OBJECT(Enum, Object);
+
+const String& Enum::ToString(const i32 value) const {
+    for (i32 index = 0; index < values.size(); ++index) {
+        if (values[index] == value) {
+            return enumerators[index];
+        }
+    }
+
+    static String unknown = "UNKNOWN_ENUMERATOR_VALUE";
+    return unknown;
+}
+
+i32 Enum::FromString(const String& value) const {
+    auto tolower = [](const String& v) {
+        String lowerValue = v;
+        std::transform(lowerValue.begin(), lowerValue.end(), lowerValue.begin(), [](char c) { return std::tolower(c); });
+        return lowerValue;
+    };
+
+    const String lowerValue = tolower(value);
+    for (i32 index = 0; index < enumerators.size(); ++index) {
+        if (lowerValue == tolower(enumerators[index])) {
+            return values[index];
+        }
+    }
+
+    return -1;
+}
 
 Array<Class*>& GetAllClasses() {
     static Array<Class*> allClasses;

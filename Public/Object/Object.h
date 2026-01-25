@@ -157,6 +157,9 @@ struct Enum : Object {
     const Array<String>& Enumerators() const { return enumerators; }
     bool IsEnumFlags() const { return isEnumFlags; }
 
+    const String& ToString(i32 value) const;
+    i32 FromString(const String& value) const;
+
 private:
     String name;
     Array<i32> values;
