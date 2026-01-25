@@ -22,8 +22,9 @@ TEST_CASE("Object fields should be correct", "[object]") {
     object->SomeOtherObject = otherObject;
     object->SomeOtherObjects.push_back(otherObject);
     object->SomeString = "Test string";
+    object->SomeEnum = TestEnum::SecondEnumerator;
 
-    REQUIRE(fields.size() == 8);
+    REQUIRE(fields.size() == 9);
     // Bool field
     REQUIRE(fields[0]->Type == ObjectFieldType::Boolean);
     REQUIRE(fields[0]->Name == "SomeBoolean");
@@ -69,6 +70,12 @@ TEST_CASE("Object fields should be correct", "[object]") {
     REQUIRE(fields[7]->Type == ObjectFieldType::String);
     REQUIRE(fields[7]->Name == "SomeString");
     REQUIRE(*static_cast<StringObjectField&>(*fields[7]).GetValuePtr(object) == "Test string");
+
+    // Enum field
+    REQUIRE(fields[8]->Type == ObjectFieldType::Enum);
+    REQUIRE(fields[8]->Name == "SomeEnum");
+    REQUIRE(static_cast<EnumObjectField&>(*fields[8]).EnumClass == StaticEnum<TestEnum>());
+    REQUIRE(*static_cast<TestEnum*>(fields[8]->GetUntypedValuePtr(object)) == TestEnum::SecondEnumerator);
 }
 
 TEST_CASE("Object class info should be correct", "[object]") {
@@ -91,6 +98,17 @@ TEST_CASE("Object class info for derived classes should be correct", "[object]")
     REQUIRE_FALSE(StaticClass<TestDerivedObject>()->IsDerivedFrom<TestReferencingArrayObject>());
 }
 
+TEST_CASE("Enum info should be correct", "[object]") {
+    REQUIRE(StaticEnum<TestEnum>()->Name() == "TestEnum");
+    REQUIRE(StaticEnum<TestEnum>()->IsEnumFlags());
+    REQUIRE(StaticEnum<TestEnum>()->Values().size() == 2);
+    REQUIRE(StaticEnum<TestEnum>()->Values()[0] == static_cast<i32>(TestEnum::FirstEnumerator));
+    REQUIRE(StaticEnum<TestEnum>()->Values()[1] == static_cast<i32>(TestEnum::SecondEnumerator));
+    REQUIRE(StaticEnum<TestEnum>()->Enumerators().size() == 2);
+    REQUIRE(StaticEnum<TestEnum>()->Enumerators()[0] == "FirstEnumerator");
+    REQUIRE(StaticEnum<TestEnum>()->Enumerators()[1] == "SecondEnumerator");
+}
+
 TEST_CASE("Object class info should be able to find derived classes", "[object]") {
     Array<Class*> derivedClasses = StaticClass<TestReferencingObject>()->GetDerivedClasses();
     REQUIRE(derivedClasses.size() == 1);
@@ -102,7 +120,7 @@ TEST_CASE("Object class info should be able to find derived classes", "[object]"
 TEST_CASE("Object fields should maintain tags", "[object]") {
     const Array<UniquePtr<ObjectField>>& fields = StaticClass<TestObject>()->Fields();
 
-    REQUIRE(fields.size() == 8);
+    REQUIRE(fields.size() == 9);
 
     REQUIRE(fields[0]->Name == "SomeBoolean");
     REQUIRE(fields[0]->HasTag("TestTag"));

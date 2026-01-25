@@ -4,6 +4,7 @@
 #include "Object/TypeTraits.h"
 
 struct Class;
+struct Enum;
 struct Object;
 
 enum class ObjectFieldType {
@@ -12,6 +13,7 @@ enum class ObjectFieldType {
     Int64,
     Real32,
     Real64,
+    Enum,
     Array,
     Object,
     String,
@@ -71,6 +73,13 @@ struct R64ObjectField : ObjectField {
     r64* GetValuePtr(Object* object) { return (r64*) GetUntypedValuePtr(object); }
 };
 
+struct EnumObjectField : ObjectField {
+    EnumObjectField(u32 offset, const String& name, Enum* enumClass);
+    EnumObjectField(u32 offset, String&& name, Enum* enumClass);
+
+    Enum* EnumClass;
+};
+
 struct ArrayObjectField : ObjectField {
     ArrayObjectField(u32 offset, const String& name, UniquePtr<ObjectField>&& innerType);
     ArrayObjectField(u32 offset, String&& name, UniquePtr<ObjectField>&& innerType);
@@ -96,6 +105,10 @@ struct StringObjectField : ObjectField {
 
 template<typename T>
 Class* StaticClass();
+
+template<typename T>
+requires(IsEnumType<T>)
+Enum* StaticEnum();
 
 namespace Detail {
     template<typename T>
@@ -162,6 +175,17 @@ namespace Detail {
     DECLARE_CREATE_OBJECT_FIELD(String)
 
 #undef DECLARE_CREATE_OBJECT_FIELD
+
+    template<typename T>
+    requires(IsEnumType<T>)
+    struct ObjectFieldCreator<T> {
+        UniquePtr<ObjectField> operator()(const u32 offset, const String& name) {
+            return MakeUnique<EnumObjectField>(offset, name, StaticEnum<T>());
+        }
+        UniquePtr<ObjectField> operator()(const u32 offset, String&& name) {
+            return MakeUnique<EnumObjectField>(offset, Move(name), StaticEnum<T>());
+        }
+    };
 
     template<typename T>
     struct ObjectFieldCreator<T*> {

@@ -14,6 +14,12 @@ target_include_directories(Object
 set_property(TARGET Object PROPERTY CXX_STANDARD 23)
 set_property(TARGET Object PROPERTY CXX_STANDARD_REQUIRED ON)
 
+add_subdirectory(ThirdParty/magic_enum)
+target_link_libraries(Object
+    PUBLIC
+        magic_enum
+)
+
 if (${OBJECT_SYSTEM_TESTS})
     add_subdirectory(ThirdParty/catch2)
 

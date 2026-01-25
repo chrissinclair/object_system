@@ -1,5 +1,7 @@
 #include "Object/Object.h"
 
+IMPL_OBJECT(Enum, Object);
+
 Array<Class*>& GetAllClasses() {
     static Array<Class*> allClasses;
     return allClasses;

@@ -1,5 +1,6 @@
 #include "TestObjects.h"
 
+IMPL_ENUM(TestEnum);
 IMPL_OBJECT(TestObject, Object);
 IMPL_OBJECT(TestReferencingObject, Object);
 IMPL_OBJECT(TestReferencingArrayObject, Object);

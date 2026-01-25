@@ -14,9 +14,15 @@ template<typename Child, typename Parent>
 constexpr bool IsDerivedFrom = std::is_base_of_v<Parent, Child>;
 
 template<typename T>
+constexpr bool IsEnumType = std::is_enum_v<T>;
+
+template<typename T>
+constexpr bool IsEnumClassType = IsEnumType<T> && !std::is_convertible_v<T, int>;
+
+template<typename T>
 using UnderlyingType = std::underlying_type_t<T>;
 
-template<typename T, std::enable_if_t<std::is_enum_v<T>, void*> = nullptr>
+template<typename T, std::enable_if_t<IsEnumType<T>, void*> = nullptr>
 struct EnumTraits {
     static constexpr bool IsFlags = false;
 };

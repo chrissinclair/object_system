@@ -57,6 +57,16 @@ DEFINE_OBJECT_FIELD_TYPE_CTOR(StringObjectField, String)
 
 #undef DEFINE_OBJECT_FIELD_TYPE_CTOR
 
+EnumObjectField::EnumObjectField(const u32 offset, const String& name, Enum* enumClass)
+    : ObjectField(ObjectFieldType::Enum, offset, name),
+      EnumClass(enumClass)
+{}
+
+EnumObjectField::EnumObjectField(const u32 offset, String&& name, Enum* enumClass)
+    : ObjectField(ObjectFieldType::Enum, offset, Move(name)),
+      EnumClass(enumClass)
+{}
+
 ObjectObjectField::ObjectObjectField(const u32 offset, const String& name, Class* innerType)
     : ObjectField(ObjectFieldType::Object, offset, name),
       InnerType(innerType)

@@ -2,6 +2,13 @@
 
 #include "Object/Object.h"
 
+enum class TestEnum {
+    FirstEnumerator,
+    SecondEnumerator = 3,
+};
+DEFINE_ENUM_CLASS_FLAGS(TestEnum)
+DECLARE_ENUM(TestEnum)
+
 struct TestObject : Object {
    virtual u32 TypeId() const override { return 'TEST'; }
     virtual String TypeName() const override { return "TestObject"; }
@@ -18,6 +25,7 @@ struct TestObject : Object {
         EXPOSE_FIELD(SomeOtherObject);
         EXPOSE_FIELD(SomeOtherObjects);
         EXPOSE_FIELD(SomeString);
+        EXPOSE_FIELD(SomeEnum);
     }
 
     virtual bool IsDestroyFinished() const override {
@@ -32,6 +40,7 @@ struct TestObject : Object {
     Object* SomeOtherObject;
     Array<Object*> SomeOtherObjects;
     String SomeString;
+    TestEnum SomeEnum;
 
     bool DestroyFinished = false;
 };

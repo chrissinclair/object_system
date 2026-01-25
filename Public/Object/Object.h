@@ -16,9 +16,14 @@ DEFINE_ENUM_CLASS_FLAGS(ObjectFlags)
 
 struct Class;
 namespace Detail {
-template<typename T>
-void ConfigureClass(Class*);
+    template<typename T>
+    void ConfigureClass(Class*);
+
+    template<typename T>
+    requires(IsEnumType<T>)
+    void ConfigureEnum(Enum*);
 }
+
 template<typename T>
 Class* StaticClass();
 
@@ -143,6 +148,26 @@ private:
     void Register();
 };
 
+struct Enum : Object {
+    virtual u32 TypeId() const override { return 'ENUM'; }
+    virtual String TypeName() const override { return "Enum"; }
+
+    const String& Name() const { return name; }
+    const Array<i32>& Values() const { return values; }
+    const Array<String>& Enumerators() const { return enumerators; }
+    bool IsEnumFlags() const { return isEnumFlags; }
+
+private:
+    String name;
+    Array<i32> values;
+    Array<String> enumerators;
+    bool isEnumFlags;
+
+    template<typename T>
+    requires(IsEnumType<T>)
+    friend void Detail::ConfigureEnum(Enum*);
+};
+
 namespace Detail {
     template<typename T>
     void ConfigureClass(Class* classInstance) {
@@ -153,15 +178,22 @@ namespace Detail {
     void ConfigureClass<Object>(Class* classInstance);
     template<>
     void ConfigureClass<Class>(Class* classInstance);
+
+    template<typename T>
+    requires(IsEnumType<T>)
+    void ConfigureEnum(Enum* enumInstance) {
+        static_assert(false, "Attempting to register an enum that's not been exposed properly. Ensure you have written DECLARE_ENUM(type) in your header file, and IMPL_ENUM(type) in your cpp file");
+    }
 }
 
 #define DECLARE_OBJECT(type) \
     namespace Detail { \
         template<> \
-        void ConfigureClass<type>(Class* classInstance); \
+        void ConfigureClass<type>(Class*); \
     }
 
 DECLARE_OBJECT(Class)
+DECLARE_OBJECT(Enum);
 
 #define IMPL_OBJECT(type, parentType) \
     namespace Detail { \
@@ -183,12 +215,49 @@ DECLARE_OBJECT(Class)
         return true; \
     }();
 
+#define DECLARE_ENUM(type) \
+    namespace Detail { \
+        template<> \
+        void ConfigureEnum<type>(Enum*); \
+    }
+
+#define IMPL_ENUM(type) \
+    namespace Detail { \
+        template<> \
+        void ConfigureEnum<type>(Enum* enumInstance) { \
+            enumInstance->name = #type; \
+            enumInstance->isEnumFlags = EnumTraits<type>::IsFlags; \
+            constexpr auto entries = magic_enum::enum_entries<type>(); \
+            enumInstance->values.reserve(entries.size()); \
+            enumInstance->enumerators.reserve(entries.size()); \
+            for (const auto& entry : entries) { \
+                enumInstance->values.push_back(static_cast<i32>(entry.first)); \
+                enumInstance->enumerators.emplace_back(entry.second); \
+            } \
+        } \
+    } \
+    static bool configuredEnumClassInstance_##type = [] { \
+        StaticEnum<type>(); \
+        return true; \
+    }();
 
 template<typename T>
 Class* StaticClass() {
     static Class* instance = []{
         Class* i = NewObject<Class>();
         Detail::ConfigureClass<T>(i);
+        i->AddToRootSet();
+        return i;
+    }();
+    return instance;
+};
+
+template<typename T>
+requires(IsEnumType<T>)
+Enum* StaticEnum() {
+    static Enum* instance = []{
+        Enum* i = NewObject<Enum>();
+        Detail::ConfigureEnum<T>(i);
         i->AddToRootSet();
         return i;
     }();
