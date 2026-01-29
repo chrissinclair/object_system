@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#define MAGIC_ENUM_NO_ASSERT
 #include <magic_enum/magic_enum.hpp>
 
 using u8 = std::uint8_t;
