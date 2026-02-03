@@ -10,6 +10,12 @@ constexpr RemoveReference<T>&& Move(T&& value) {
     return static_cast<RemoveReference<T>&&>(value);
 }
 
+template<typename, typename = void>
+constexpr bool IsTypeComplete = false;
+
+template<typename T>
+constexpr bool IsTypeComplete<T, std::void_t<decltype(sizeof(T))>> = true;
+
 template<typename Child, typename Parent>
 constexpr bool IsDerivedFrom = std::is_base_of_v<Parent, Child>;
 
@@ -109,3 +115,17 @@ void UnsetFlag(T& value, const T flag) {
     struct EnumTraits<EnumClass> { \
         static constexpr bool IsFlags = true; \
     };
+
+#define MACRO_CONCAT_(a, b) a ## b
+#define MACRO_CONCAT(a, b) MACRO_CONCAT_(a, b)
+#define MACRO_QUOTE(a) #a
+#define MACRO_PARENTHESES ()
+#define MACRO_EXPAND(...) MACRO_EXPAND4(MACRO_EXPAND4(MACRO_EXPAND4(MACRO_EXPAND4(__VA_ARGS__))))
+#define MACRO_EXPAND4(...) MACRO_EXPAND3(MACRO_EXPAND3(MACRO_EXPAND3(MACRO_EXPAND3(__VA_ARGS__))))
+#define MACRO_EXPAND3(...) MACRO_EXPAND2(MACRO_EXPAND2(MACRO_EXPAND2(MACRO_EXPAND2(__VA_ARGS__))))
+#define MACRO_EXPAND2(...) MACRO_EXPAND1(MACRO_EXPAND1(MACRO_EXPAND1(MACRO_EXPAND1(__VA_ARGS__))))
+#define MACRO_EXPAND1(...) __VA_ARGS__
+
+#define MACRO_FOR_EACH(macro, ...) __VA_OPT__(MACRO_EXPAND(MACRO_FOR_EACH_(macro, __VA_ARGS__)))
+#define MACRO_FOR_EACH_AGAIN_() MACRO_FOR_EACH_
+#define MACRO_FOR_EACH_(macro, arg1, ...) macro(arg1) __VA_OPT__(, MACRO_FOR_EACH_AGAIN_ MACRO_PARENTHESES (macro, __VA_ARGS__))

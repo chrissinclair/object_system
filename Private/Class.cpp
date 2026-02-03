@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-IMPL_OBJECT(Enum, Object);
+IMPL_OBJECT(Enum);
 
 const String& Enum::ToString(const i32 value) const {
     for (i32 index = 0; index < values.size(); ++index) {
@@ -79,7 +79,7 @@ void Detail::ConfigureClass<Object>(Class* classInstance) {
     classInstance->constructor = [](Object* object) {
         new (object) Object{};
     };
-    StaticInstance<Object>()->GetObjectFields(classInstance->fields);
+    Object::ClassDetail::InitializeFields(classInstance->fields);
     StaticInstance<Object>()->classInstance = classInstance;
     classInstance->staticInstance = StaticInstance<Object>();
     classInstance->Register();
@@ -93,9 +93,18 @@ void Detail::ConfigureClass<Class>(Class* classInstance) {
     classInstance->constructor = [](Object* object) {
         new (object) Class{};
     };
-    StaticInstance<Class>()->GetObjectFields(classInstance->fields);
+    Class::ClassDetail::InitializeFields(classInstance->fields);
     StaticInstance<Class>()->classInstance = classInstance;
     classInstance->staticInstance = StaticInstance<Class>();
+    classInstance->Register();
+}
+
+template<>
+void Detail::ConfigureClass<Struct>(Class* classInstance) {
+    classInstance->parent = nullptr;
+    classInstance->name = "Struct";
+    classInstance->size = sizeof(Struct);
+    Struct::ClassDetail::InitializeFields(classInstance->fields);
     classInstance->Register();
 }
 

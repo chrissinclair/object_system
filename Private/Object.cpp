@@ -9,14 +9,21 @@ ObjectFlags Object::GetFlags() const {
     return GetHeaderForObject(this)->Flags;
 }
 
-const Array<UniquePtr<ObjectField>>& Object::GetObjectFields() const {
-    if (IsValid(GetClass())) {
-        return GetClass()->Fields();
+void Detail::ParseTags(const Array<String>& tags, Set<String>& outFlags, Map<String, String>& outParams) {
+    for (const String& tag : tags) {
+        const usize equalsIndex = tag.find("=");
+        if (equalsIndex == String::npos) {
+            outFlags.insert(tag);
+        } else {
+            outParams[tag.substr(0, equalsIndex)] = tag.substr(equalsIndex + 1);
+        }
     }
-    static Array<UniquePtr<ObjectField>> empty;
-    return empty;
 }
-void Object::GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const {
+
+void Object::ClassDetail::InitializeFields(Array<UniquePtr<ObjectField>>& fields) {
+}
+
+void Struct::ClassDetail::InitializeFields(Array<UniquePtr<ObjectField>>& fields) {
 }
 
 void Object::AddToRootSet() {
@@ -87,7 +94,9 @@ Class* NewObject<Class>() {
         return nullptr;
     }
     new (object) Class();
-    return (Class*) object;
+    Class* result = (Class*) object;
+    result->classInstance = StaticInstance<Class>();
+    return result;
 }
 
 bool IsValid(const Object* object) {
@@ -118,10 +127,7 @@ Object* WeakObjectPtrBase::Get() {
 }
 
 struct StrongObjectPtrManager : Object {
-    virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const override {
-        Object::GetObjectFields(fields);
-        EXPOSE_FIELD(objects);
-    }
+    OBJECT_BODY(StrongObjectPtrManager, Object)
 
     i32 Register(Object* object) {
         const i32 numberOfObjects = objects.size();
@@ -151,10 +157,11 @@ struct StrongObjectPtrManager : Object {
     }
 
     Array<Object*> objects;
+    OBJECT_PROPERTY(objects)
 };
 
 DECLARE_OBJECT(StrongObjectPtrManager)
-IMPL_OBJECT(StrongObjectPtrManager, Object)
+IMPL_OBJECT(StrongObjectPtrManager)
 
 StrongObjectPtrManager* StaticStrongObjectPtrManager() {
     static StrongObjectPtrManager* instance = NewObject<StrongObjectPtrManager>();

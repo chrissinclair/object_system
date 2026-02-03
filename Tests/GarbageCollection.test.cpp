@@ -110,6 +110,51 @@ TEST_CASE("Objects referenced through arrays should not be collected", "[GC]") {
     REQUIRE_FALSE(IsValid(object4));
 }
 
+TEST_CASE("Objects reference through structs should not be collected", "[GC]") {
+    TestObject* object = NewObject<TestObject>();
+    TestObject* object2 = NewObject<TestObject>();
+    TestObject* object3 = NewObject<TestObject>();
+
+    REQUIRE(IsValid(object));
+    REQUIRE(IsValid(object2));
+    REQUIRE(IsValid(object3));
+
+    object->AddToRootSet();
+    object->SomeStruct.SomeOtherObject = object2;
+
+    Object::CollectGarbage();
+
+    REQUIRE(IsValid(object));
+    REQUIRE(IsValid(object2));
+    REQUIRE_FALSE(IsValid(object3));
+
+    object->SomeStruct.SomeOtherObject = nullptr;
+    object->SomeStruct.SomeOtherObjects.push_back(object2);
+
+    Object::CollectGarbage();
+
+    REQUIRE(IsValid(object));
+    REQUIRE(IsValid(object2));
+    REQUIRE_FALSE(IsValid(object3));
+
+    object->SomeStruct.SomeOtherObjects.clear();
+    object->SomeStruct.SomeOtherStructs.emplace_back().SomeOtherObject = object2;
+
+    Object::CollectGarbage();
+
+    REQUIRE(IsValid(object));
+    REQUIRE(IsValid(object2));
+    REQUIRE_FALSE(IsValid(object3));
+
+    object->SomeStruct.SomeOtherStructs.clear();
+
+    Object::CollectGarbage();
+
+    REQUIRE(IsValid(object));
+    REQUIRE_FALSE(IsValid(object2));
+    REQUIRE_FALSE(IsValid(object3));
+}
+
 TEST_CASE("Pointers to destroyed objects should be nulled out", "[GC]") {
     TestReferencingObject* object = NewObject<TestReferencingObject>();
     TestReferencingObject* objectToDestroy = NewObject<TestReferencingObject>();

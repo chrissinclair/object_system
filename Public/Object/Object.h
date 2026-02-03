@@ -25,15 +25,56 @@ namespace Detail {
     void ConfigureEnum(Enum*);
 }
 
+#define OBJECT_MAX_FIELD_COUNT_DEFAULT 32
+#ifndef OBJECT_MAX_FIELD_COUNT
+#define OBJECT_MAX_FIELD_COUNT OBJECT_MAX_FIELD_COUNT_DEFAULT
+#endif
+
+#define OBJECT_BODY(ClassType, ParentType) \
+public: \
+    using ThisClass = ClassType; \
+    using Super = ParentType; \
+private: \
+    static constexpr usize OBJECT_FIELD_COUNTER_BASE = __COUNTER__; \
+    template<usize FieldNumber> struct ObjectFieldInitializer; \
+    template<usize FieldNumber> \
+    requires(IsTypeComplete<ObjectFieldInitializer<FieldNumber>>) \
+    static void InitializeObjectField(Array<UniquePtr<ObjectField>>& fields) { \
+        using Info = ObjectFieldInitializer<FieldNumber>; \
+        fields.emplace_back(Detail::CreateObjectField<typename Info::Type>(Info::Name, Info::GetOffset(), Info::GetTags())); \
+    } \
+    template<usize FieldNumber> static void InitializeObjectField(Array<UniquePtr<ObjectField>>& fields) {} \
+    template<typename T, usize... FieldIndices> \
+    static void InitializeObjectFields(Array<UniquePtr<ObjectField>>& fields, std::integer_sequence<T, FieldIndices...>) { \
+        (InitializeObjectField<FieldIndices>(fields), ...); \
+    } \
+public: \
+    struct ClassDetail { \
+        static void InitializeFields(Array<UniquePtr<ObjectField>>& fields) { \
+            Super::ClassDetail::InitializeFields(fields); \
+            ThisClass::InitializeObjectFields(fields, std::make_index_sequence<OBJECT_MAX_FIELD_COUNT>{}); \
+        } \
+    };
+
+#define OBJECT_PROPERTY(field, ...) \
+private: \
+    template<> struct ObjectFieldInitializer<__COUNTER__ - OBJECT_FIELD_COUNTER_BASE - 1> { \
+        using Type = decltype(field); \
+        static constexpr const char* Name = #field; \
+        static usize GetOffset() { return (usize)(&((ThisClass*)0)->field); } \
+        static Array<String> GetTags() { return { MACRO_FOR_EACH( MACRO_QUOTE, __VA_ARGS__ ) }; } \
+    }; \
+public:
+
 template<typename T>
 Class* StaticClass();
 
 struct Object {
+    using ThisClass = Object;
+
     virtual ~Object();
 
     ObjectFlags GetFlags() const;
-
-    const Array<UniquePtr<ObjectField>>& GetObjectFields() const;
 
     void AddToRootSet();
     void RemoveFromRootSet();
@@ -51,8 +92,30 @@ struct Object {
 
     Class* GetClass() const { return classInstance; }
 
-protected:
-    virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const;
+public:
+    struct ClassDetail {
+        static void InitializeFields(Array<UniquePtr<ObjectField>>& fields);
+    };
+
+private:
+    template<typename T>
+    friend void Detail::ConfigureClass(Class*);
+    template<typename T>
+    friend T* NewObject();
+    friend Object* NewObject(Class*);
+
+    Class* classInstance = nullptr;
+};
+
+struct Struct {
+    using ThisClass = Struct;
+
+    Class* GetClass() const { return classInstance; }
+
+public:
+    struct ClassDetail {
+        static void InitializeFields(Array<UniquePtr<ObjectField>>& fields);
+    };
 
 private:
     template<typename T>
@@ -65,17 +128,25 @@ private:
 };
 
 template<typename T>
+requires(IsDerivedFrom<T, Object>)
 T* StaticInstance() {
-    static_assert(IsDerivedFrom<T, Object>, "T must be an object to create a static instance");
     static T instance{};
     return &instance;
 }
+
+template<typename T> T* Cast(Object* object);
+template<typename T> const T* Cast(const Object* object);
 
 namespace Detail {
     void* AllocObject(u32 objectSize);
 }
 
 Object* NewObject(Class* objectClass);
+
+template<typename T>
+T* NewObject(Class* objectClass) {
+    return Cast<T>(NewObject(objectClass));
+}
 
 template<typename T>
 T* NewObject() {
@@ -91,11 +162,9 @@ bool IsValid(const Object* object);
 template<typename T>
 struct Class* StaticClass();
 
-
-template<typename T> T* Cast(Object* object);
-template<typename T> const T* Cast(const Object* object);
-
 struct Class : Object {
+    OBJECT_BODY(Class, Object)
+
     u32 Size() const { return size; }
     const String& Name() const { return name; }
     Class* Parent() const { return parent; }
@@ -131,6 +200,8 @@ private:
 };
 
 struct Enum : Object {
+    OBJECT_BODY(Enum, Object)
+
     const String& Name() const { return name; }
     const Array<i32>& Values() const { return values; }
     const Array<String>& Enumerators() const { return enumerators; }
@@ -153,13 +224,15 @@ private:
 namespace Detail {
     template<typename T>
     void ConfigureClass(Class* classInstance) {
-        static_assert(false, "Attempting to register a class that's not been exposed properly. Ensure you have written DECLARE_OBJECT(type) in your header file, and IMPL_OBJECT(type, parentType) in your cpp file");
+        static_assert(false, "Attempting to register a class that's not been exposed properly. Ensure you have written DECLARE_OBJECT(type) in your header file, and IMPL_OBJECT(type) in your cpp file");
     }
 
     template<>
     void ConfigureClass<Object>(Class* classInstance);
     template<>
     void ConfigureClass<Class>(Class* classInstance);
+    template<>
+    void ConfigureClass<Struct>(Class* classInstance);
 
     template<typename T>
     requires(IsEnumType<T>)
@@ -177,15 +250,15 @@ namespace Detail {
 DECLARE_OBJECT(Class)
 DECLARE_OBJECT(Enum);
 
-#define IMPL_OBJECT(type, parentType) \
+#define IMPL_OBJECT(type) \
     namespace Detail { \
         template<> \
         void ConfigureClass<type>(Class* classInstance) { \
             classInstance->name = #type; \
-            classInstance->parent = StaticClass<parentType>(); \
+            classInstance->parent = StaticClass<type::Super>(); \
             classInstance->size = sizeof(type); \
+            type::ClassDetail::InitializeFields(classInstance->fields); \
             classInstance->constructor = [](Object* object) { new (object) type{}; }; \
-            StaticInstance<type>()->GetObjectFields(classInstance->fields); \
             StaticInstance<type>()->classInstance = classInstance; \
             classInstance->staticInstance = StaticInstance<type>(); \
             classInstance->Register(); \
@@ -195,6 +268,29 @@ DECLARE_OBJECT(Enum);
         StaticClass<type>(); \
         return true; \
     }();
+
+#define DECLARE_STRUCT(type) \
+    namespace Detail { \
+        template<> \
+        void ConfigureClass<type>(Class*); \
+    }
+
+#define IMPL_STRUCT(type) \
+    namespace Detail { \
+        template<> \
+        void ConfigureClass<type>(Class* classInstance) { \
+            classInstance->name = #type; \
+            classInstance->parent = StaticClass<type::Super>(); \
+            classInstance->size = sizeof(type); \
+            type::ClassDetail::InitializeFields(classInstance->fields); \
+            classInstance->Register(); \
+        } \
+    } \
+    static bool configuredStructClassInstance_##type = []{ \
+        StaticClass<type>(); \
+        return true; \
+    }();
+
 
 #define DECLARE_ENUM(type) \
     namespace Detail { \

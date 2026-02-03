@@ -6,58 +6,92 @@ Array<Object*>& GetRootSet() {
     return rootSet;
 }
 
+void MarkObjectsReachableFrom(Object* object);
+void MarkObjectsReachableFromObject(Object* object, Object** referencer, ObjectObjectField& objectField);
+void MarkObjectsReachableFromStruct(void* structBase, Class* structClass);
+void MarkObjectsReachableFromArray(void* arrayBase, ArrayObjectField& arrayField);
+void MarkObjectsReachableFromObjectField(Object* object, ObjectObjectField& objectField);
+void MarkObjectsReachableFromStructField(Object* object, StructObjectField& structField);
+void MarkObjectsReachableFromArrayField(Object* object, ArrayObjectField& arrayField);
+
+void MarkObjectsReachableFromObject(Object** objectReference) {
+     if (!objectReference || !*objectReference) {
+        return;
+     }
+
+    ObjectHeader* objectHeader = GetHeaderForObject(*objectReference);
+    if (!objectHeader || objectHeader->Magic != ObjectHeader::RequiredMagic) {
+        // TODO: this is bad, we should really warn about it
+        return;
+    }
+
+    if (HasAnyFlags(objectHeader->Flags, ObjectFlags::Unreachable)) {
+        UnsetFlag(objectHeader->Flags, ObjectFlags::Unreachable);
+        MarkObjectsReachableFrom(*objectReference);
+    }
+
+    // Remove pointers to destroyed / destroying objects
+    if (HasAnyFlags(objectHeader->Flags, ObjectFlags::IsBeingDestroyed | ObjectFlags::IsDestroyed)) {
+        *objectReference = nullptr;
+    }
+}
+
+void MarkObjectsReachableFromObjectField(Object* object, ObjectObjectField& objectField) {
+    Object** referencedObject = objectField.GetValuePtr(object);
+    MarkObjectsReachableFromObject(referencedObject);
+}
+
+void MarkObjectsReachableFromArray(void* arrayBase, ArrayObjectField& arrayField) {
+    if (arrayField.InnerType->Type == ObjectFieldType::Object) {
+        Array<Object*>* objects = (Array<Object*>*) arrayBase;
+        for (Object*& referencedObject : *objects) {
+            MarkObjectsReachableFromObject(&referencedObject);
+        }
+    } else if (arrayField.InnerType->Type == ObjectFieldType::Struct) {
+        Class* structClass = arrayField.InnerType->As<StructObjectField>()->StructType;
+        const usize structSize = structClass->Size();
+        Array<u8>* structs = (Array<u8>*) arrayBase;
+        const usize numStructs = structs->size() / structSize;
+        for (u32 structIndex = 0; structIndex < numStructs; ++structIndex) {
+            MarkObjectsReachableFromStruct(structs->data() + (structIndex * structSize), structClass);
+        }
+    }
+}
+void MarkObjectsReachableFromArrayField(Object* object, ArrayObjectField& arrayField) {
+    MarkObjectsReachableFromArray(arrayField.GetUntypedValuePtr(object), arrayField);
+}
+
+void MarkObjectsReachableFromStructField(Object* object, StructObjectField& structField) {
+    MarkObjectsReachableFromStruct(structField.GetValuePtr(object), structField.StructType);
+}
+
+void MarkObjectsReachableFromStruct(void* structBase, Class* structClass) {
+    for (const UniquePtr<ObjectField>& field : structClass->Fields()) {
+        void* fieldStructBase = field->GetUntypedValuePtr(structBase);
+        if (field->Type == ObjectFieldType::Object) {
+            MarkObjectsReachableFromObject(field->As<ObjectObjectField>()->GetValuePtr(structBase));
+        } else if (field->Type == ObjectFieldType::Struct) {
+            MarkObjectsReachableFromStruct(fieldStructBase, field->As<StructObjectField>()->StructType);
+        } else if (field->Type == ObjectFieldType::Array) {
+            MarkObjectsReachableFromArray(fieldStructBase, *field->As<ArrayObjectField>());
+        }
+    }
+}
+
 void MarkObjectsReachableFrom(Object* object) {
-    const Array<UniquePtr<ObjectField>>& fields = object->GetObjectFields();
+    const Array<UniquePtr<ObjectField>>& fields = object->GetClass()->Fields();
     for (const UniquePtr<ObjectField>& field : fields) {
         if (field->Type == ObjectFieldType::Object) {
-            ObjectObjectField& objectField = static_cast<ObjectObjectField&>(*field);
-            Object** referencedObject = objectField.GetValuePtr(object);
-            if (!*referencedObject) {
-                continue;
-            }
-
-            ObjectHeader* referencedObjectHeader = GetHeaderForObject(*referencedObject);
-            if (!referencedObjectHeader || referencedObjectHeader->Magic != ObjectHeader::RequiredMagic) {
-                // TODO: this is bad, we should really warn about it
-                continue;
-            }
-
-            if (HasAnyFlags(referencedObjectHeader->Flags, ObjectFlags::Unreachable)) {
-                UnsetFlag(referencedObjectHeader->Flags, ObjectFlags::Unreachable);
-                MarkObjectsReachableFrom(*referencedObject);
-            }
-
-            // Remove pointers to destroyed / destroying objects
-            if (HasAnyFlags(referencedObjectHeader->Flags, ObjectFlags::IsBeingDestroyed | ObjectFlags::IsDestroyed)) {
-                *referencedObject = nullptr;
-            }
+            MarkObjectsReachableFromObjectField(object, *field->As<ObjectObjectField>());
+        } else if (field->Type == ObjectFieldType::Struct) {
+            StructObjectField* structField = field->As<StructObjectField>();
+            MarkObjectsReachableFromStructField(object, *structField);
         } else if (field->Type == ObjectFieldType::Array) {
-            ArrayObjectField& arrayField = static_cast<ArrayObjectField&>(*field);
-            if (arrayField.InnerType->Type != ObjectFieldType::Object) {
+            ArrayObjectField* arrayField = field->As<ArrayObjectField>();
+            if (arrayField->InnerType->Type != ObjectFieldType::Object && arrayField->InnerType->Type != ObjectFieldType::Struct) {
                 continue;
             }
-
-            Array<Object*>* objects = (Array<Object*>*) arrayField.GetUntypedValuePtr(object);
-            for (Object*& referencedObject : *objects) {
-                if (!referencedObject) {
-                    continue;
-                }
-                ObjectHeader* referencedObjectHeader = GetHeaderForObject(referencedObject);
-                if (!referencedObjectHeader || referencedObjectHeader->Magic != ObjectHeader::RequiredMagic) {
-                    // TODO: this is bad, we should really warn about it
-                    continue;
-                }
-
-                if (HasAnyFlags(referencedObjectHeader->Flags, ObjectFlags::Unreachable)) {
-                    UnsetFlag(referencedObjectHeader->Flags, ObjectFlags::Unreachable);
-                    MarkObjectsReachableFrom(referencedObject);
-                }
-
-                // Remove pointers to destroyed / destroying objects
-                if (HasAnyFlags(referencedObjectHeader->Flags, ObjectFlags::IsBeingDestroyed | ObjectFlags::IsDestroyed)) {
-                    referencedObject = nullptr;
-                }
-            }
+            MarkObjectsReachableFromArrayField(object, *arrayField);
         }
     }
 }

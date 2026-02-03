@@ -1,51 +1,45 @@
 #include "Object/ObjectField.h"
 #include "Object/TypeTraits.h"
 
-ObjectField::ObjectField(const ObjectFieldType type, const u32 offset, const String& name)
+ObjectField::ObjectField(const ObjectFieldType type, const String& name, const u32 offset)
     : Type(type),
       Offset(offset),
       Name(name)
 {}
 
-ObjectField::ObjectField(const ObjectFieldType type, const u32 offset, String&& name)
+ObjectField::ObjectField(const ObjectFieldType type, String&& name, const u32 offset)
     : Type(type),
       Offset(offset),
       Name(Move(name))
 {}
 
-bool ObjectField::HasTag(const String& tag) const {
-    return tags.find(tag) != tags.end();
+bool ObjectField::HasFlag(const String& flag) const {
+    return flags.find(flag) != flags.end();
 }
 
-const String& ObjectField::GetTag(const String& tag) const {
-    auto it = tags.find(tag);
-    if (it != tags.end()) {
+bool ObjectField::HasParam(const String& param) const {
+    return params.find(param) != params.end();
+}
+
+const String& ObjectField::GetParam(const String& param) const {
+    auto it = params.find(param);
+    if (it != params.end()) {
         return it->second;
     }
     static String missingTag{};
     return missingTag;
 }
 
-ObjectField* ObjectField::WithTag(const String& tag, const String& value) {
-    tags.emplace(tag, value);
-    return this;
-}
-
-ObjectField* ObjectField::WithTag(String&& tag, String&& value) {
-    tags.emplace(Move(tag), Move(value));
-    return this;
-}
-
-void* ObjectField::GetUntypedValuePtr(Object* object) {
+void* ObjectField::GetUntypedValuePtr(void* object) {
     return ((u8*) object) + Offset;
 }
 
 #define DEFINE_OBJECT_FIELD_TYPE_CTOR(type, objectFieldType) \
-    type::type(const u32 offset, const String& name) \
-        : ObjectField(ObjectFieldType::objectFieldType, offset, name) \
+    type::type(const String& name, const u32 offset) \
+        : ObjectField(ObjectFieldType::objectFieldType, name, offset) \
     {} \
-    type::type(const u32 offset, String&& name) \
-        : ObjectField(ObjectFieldType::objectFieldType, offset, Move(name)) \
+    type::type(String&& name, const u32 offset) \
+        : ObjectField(ObjectFieldType::objectFieldType, Move(name), offset) \
     {}
 
 DEFINE_OBJECT_FIELD_TYPE_CTOR(BoolObjectField, Boolean)
@@ -57,41 +51,51 @@ DEFINE_OBJECT_FIELD_TYPE_CTOR(StringObjectField, String)
 
 #undef DEFINE_OBJECT_FIELD_TYPE_CTOR
 
-EnumObjectField::EnumObjectField(const u32 offset, const String& name, Enum* enumClass)
-    : ObjectField(ObjectFieldType::Enum, offset, name),
+EnumObjectField::EnumObjectField(const String& name, const u32 offset, Enum* enumClass)
+    : ObjectField(ObjectFieldType::Enum, name, offset),
       EnumClass(enumClass)
 {}
 
-EnumObjectField::EnumObjectField(const u32 offset, String&& name, Enum* enumClass)
-    : ObjectField(ObjectFieldType::Enum, offset, Move(name)),
+EnumObjectField::EnumObjectField(String&& name, const u32 offset, Enum* enumClass)
+    : ObjectField(ObjectFieldType::Enum, Move(name), offset),
       EnumClass(enumClass)
 {}
 
-ObjectObjectField::ObjectObjectField(const u32 offset, const String& name, Class* innerType)
-    : ObjectField(ObjectFieldType::Object, offset, name),
+ObjectObjectField::ObjectObjectField(const String& name, const u32 offset, Class* innerType)
+    : ObjectField(ObjectFieldType::Object, name, offset),
       InnerType(innerType)
 {}
 
-ObjectObjectField::ObjectObjectField(const u32 offset, String&& name, Class* innerType)
-    : ObjectField(ObjectFieldType::Object, offset, Move(name)),
+ObjectObjectField::ObjectObjectField(String&& name, const u32 offset, Class* innerType)
+    : ObjectField(ObjectFieldType::Object, Move(name), offset),
       InnerType(innerType)
 {}
 
-ArrayObjectField::ArrayObjectField(const u32 offset, const String& name, UniquePtr<ObjectField>&& innerType)
-    : ObjectField(ObjectFieldType::Array, offset, name),
+StructObjectField::StructObjectField(const String& name, const u32 offset, Class* structType)
+    : ObjectField(ObjectFieldType::Struct, name, offset),
+      StructType(structType)
+{}
+
+StructObjectField::StructObjectField(String&& name, const u32 offset, Class* structType)
+    : ObjectField(ObjectFieldType::Struct, Move(name), offset),
+      StructType(structType)
+{}
+
+ArrayObjectField::ArrayObjectField(const String& name, const u32 offset, UniquePtr<ObjectField>&& innerType)
+    : ObjectField(ObjectFieldType::Array, name, offset),
       InnerType(Move(innerType))
 {}
-ArrayObjectField::ArrayObjectField(const u32 offset, String&& name, UniquePtr<ObjectField>&& innerType)
-    : ObjectField(ObjectFieldType::Array, offset, Move(name)),
+ArrayObjectField::ArrayObjectField(String&& name, const u32 offset, UniquePtr<ObjectField>&& innerType)
+    : ObjectField(ObjectFieldType::Array, Move(name), offset),
       InnerType(Move(innerType))
 {}
 
 #define DEFINE_CREATE_OBJECT_FIELD(type, objectFieldType) \
-UniquePtr<ObjectField> Detail::ObjectFieldCreator<type>::operator()(const u32 offset, const String& name) { \
-    return MakeUnique<objectFieldType>(offset, name); \
+UniquePtr<ObjectField> Detail::ObjectFieldCreator<type>::operator()(const String& name, const u32 offset) { \
+    return MakeUnique<objectFieldType>(name, offset); \
 } \
-UniquePtr<ObjectField> Detail::ObjectFieldCreator<type>::operator()(const u32 offset, String&& name) { \
-    return MakeUnique<objectFieldType>(offset, Move(name)); \
+UniquePtr<ObjectField> Detail::ObjectFieldCreator<type>::operator()(String&& name, const u32 offset) { \
+    return MakeUnique<objectFieldType>(Move(name), offset); \
 }
 
 DEFINE_CREATE_OBJECT_FIELD(bool, BoolObjectField)

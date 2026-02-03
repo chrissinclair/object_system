@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #define MAGIC_ENUM_NO_ASSERT
@@ -58,6 +59,8 @@ template<typename T>
 using Array = std::vector<T>;
 template<typename K, typename V>
 using Map = std::unordered_map<K, V>;
+template<typename T>
+using Set = std::unordered_set<T>;
 template<typename T>
 using UniquePtr = std::unique_ptr<T>;
 template<typename T, typename... Args>

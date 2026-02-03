@@ -1,8 +1,10 @@
 #include "TestObjects.h"
 
 IMPL_ENUM(TestEnum);
-IMPL_OBJECT(TestObject, Object);
-IMPL_OBJECT(TestReferencingObject, Object);
-IMPL_OBJECT(TestReferencingArrayObject, Object);
-IMPL_OBJECT(TestDelayedDestroyObject, Object);
-IMPL_OBJECT(TestDerivedObject, TestReferencingObject);
+IMPL_STRUCT(TestStruct);
+IMPL_STRUCT(TestReferenceStruct);
+IMPL_OBJECT(TestObject);
+IMPL_OBJECT(TestReferencingObject);
+IMPL_OBJECT(TestReferencingArrayObject);
+IMPL_OBJECT(TestDelayedDestroyObject);
+IMPL_OBJECT(TestDerivedObject);
