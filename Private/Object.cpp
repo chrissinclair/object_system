@@ -9,8 +9,6 @@ ObjectFlags Object::GetFlags() const {
     return GetHeaderForObject(this)->Flags;
 }
 
-u32 Object::TypeId() const { return 'OBJT'; }
-String Object::TypeName() const { return "Object"; }
 const Array<UniquePtr<ObjectField>>& Object::GetObjectFields() const {
     if (IsValid(GetClass())) {
         return GetClass()->Fields();
@@ -120,8 +118,6 @@ Object* WeakObjectPtrBase::Get() {
 }
 
 struct StrongObjectPtrManager : Object {
-    virtual u32 TypeId() const override { return 'SOPM'; }
-    virtual String TypeName() const override { return "StrongObjectPtrManager"; }
     virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const override {
         Object::GetObjectFields(fields);
         EXPOSE_FIELD(objects);

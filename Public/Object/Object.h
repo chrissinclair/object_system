@@ -15,6 +15,7 @@ enum class ObjectFlags : u8 {
 DEFINE_ENUM_CLASS_FLAGS(ObjectFlags)
 
 struct Class;
+
 namespace Detail {
     template<typename T>
     void ConfigureClass(Class*);
@@ -32,8 +33,6 @@ struct Object {
 
     ObjectFlags GetFlags() const;
 
-    virtual u32 TypeId() const;
-    virtual String TypeName() const;
     const Array<UniquePtr<ObjectField>>& GetObjectFields() const;
 
     void AddToRootSet();
@@ -72,18 +71,6 @@ T* StaticInstance() {
     return &instance;
 }
 
-template<typename T>
-const String& StaticTypeName() {
-    static const String typeName = StaticInstance<T>()->TypeName();
-    return typeName;
-}
-
-template<typename T>
-u32 StaticTypeId() {
-    static const u32 typeId = StaticInstance<T>()->TypeId();
-    return typeId;
-}
-
 namespace Detail {
     void* AllocObject(u32 objectSize);
 }
@@ -109,10 +96,6 @@ template<typename T> T* Cast(Object* object);
 template<typename T> const T* Cast(const Object* object);
 
 struct Class : Object {
-    virtual u32 TypeId() const override { return 'CLAS'; }
-    virtual String TypeName() const override { return "Class"; }
-
-    u32 ClassTypeId() const { return typeId; }
     u32 Size() const { return size; }
     const String& Name() const { return name; }
     Class* Parent() const { return parent; }
@@ -135,7 +118,6 @@ private:
     Class* parent = nullptr;
     Object* staticInstance = nullptr;
     String name;
-    u32 typeId;
     u32 size;
     Array<UniquePtr<ObjectField>> fields;
     void(*constructor)(Object* object);
@@ -149,9 +131,6 @@ private:
 };
 
 struct Enum : Object {
-    virtual u32 TypeId() const override { return 'ENUM'; }
-    virtual String TypeName() const override { return "Enum"; }
-
     const String& Name() const { return name; }
     const Array<i32>& Values() const { return values; }
     const Array<String>& Enumerators() const { return enumerators; }
@@ -204,7 +183,6 @@ DECLARE_OBJECT(Enum);
         void ConfigureClass<type>(Class* classInstance) { \
             classInstance->name = #type; \
             classInstance->parent = StaticClass<parentType>(); \
-            classInstance->typeId = StaticTypeId<type>(); \
             classInstance->size = sizeof(type); \
             classInstance->constructor = [](Object* object) { new (object) type{}; }; \
             StaticInstance<type>()->GetObjectFields(classInstance->fields); \

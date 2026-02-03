@@ -10,8 +10,6 @@ DEFINE_ENUM_CLASS_FLAGS(TestEnum)
 DECLARE_ENUM(TestEnum)
 
 struct TestObject : Object {
-   virtual u32 TypeId() const override { return 'TEST'; }
-    virtual String TypeName() const override { return "TestObject"; }
     virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const override {
         Object::GetObjectFields(fields);
         EXPOSE_FIELD(SomeBoolean)
@@ -48,8 +46,6 @@ struct TestObject : Object {
 DECLARE_OBJECT(TestObject);
 
 struct TestReferencingObject : Object {
-    virtual u32 TypeId() const override { return 'REFR'; }
-    virtual String TypeName() const override { return "TestReferencingObject"; }
     virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const override {
         Object::GetObjectFields(fields);
         EXPOSE_FIELD(Next);
@@ -61,8 +57,6 @@ struct TestReferencingObject : Object {
 DECLARE_OBJECT(TestReferencingObject);
 
 struct TestReferencingArrayObject : Object {
-    virtual u32 TypeId() const override { return 'REFA'; }
-    virtual String TypeName() const override { return "TestReferencingArrayObject"; }
     virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const override {
         Object::GetObjectFields(fields);
         EXPOSE_FIELD(Others);
@@ -74,8 +68,6 @@ struct TestReferencingArrayObject : Object {
 DECLARE_OBJECT(TestReferencingArrayObject);
 
 struct TestDelayedDestroyObject : Object {
-    virtual u32 TypeId() const override { return 'DSRY'; }
-    virtual String TypeName() const override { return "TestDelayedDestroyObject"; }
     virtual bool IsDestroyFinished() const override { return FinishedDestruction; }
 
     bool FinishedDestruction = false;
@@ -84,8 +76,6 @@ struct TestDelayedDestroyObject : Object {
 DECLARE_OBJECT(TestDelayedDestroyObject);
 
 struct TestDerivedObject : TestReferencingObject {
-    virtual u32 TypeId() const override { return 'DERV'; }
-    virtual String TypeName() const override { return "TestDerivedObject"; }
     virtual void GetObjectFields(Array<UniquePtr<ObjectField>>& fields) const override {
         TestReferencingObject::GetObjectFields(fields);
         EXPOSE_FIELD(Other);

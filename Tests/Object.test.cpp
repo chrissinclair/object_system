@@ -3,8 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("Static type info should be correct", "[object]") {
-    REQUIRE(StaticTypeId<TestObject>() == 'TEST');
-    REQUIRE(StaticTypeName<TestObject>() == "TestObject");
+    REQUIRE(StaticClass<TestObject>()->Name() == "TestObject");
 }
 
 TEST_CASE("Object fields should be correct", "[object]") {

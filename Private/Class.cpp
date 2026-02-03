@@ -52,7 +52,7 @@ bool Class::IsDerivedFrom(const Class* parentClass) const {
         return false;
     }
 
-    if (ClassTypeId() == parentClass->ClassTypeId()) {
+    if (this == parentClass) {
         return true;
     }
 
@@ -75,7 +75,6 @@ template<>
 void Detail::ConfigureClass<Object>(Class* classInstance) {
     classInstance->parent = nullptr;
     classInstance->name = "Object";
-    classInstance->typeId = StaticTypeId<Object>();
     classInstance->size = sizeof(Object);
     classInstance->constructor = [](Object* object) {
         new (object) Object{};
@@ -90,7 +89,6 @@ template<>
 void Detail::ConfigureClass<Class>(Class* classInstance) {
     classInstance->parent = StaticClass<Object>();
     classInstance->name = "Class";
-    classInstance->typeId = StaticTypeId<Class>();
     classInstance->size = sizeof(Class);
     classInstance->constructor = [](Object* object) {
         new (object) Class{};
